@@ -4,9 +4,20 @@ Central configuration for LinkedIn Automation.
 All secrets should be set as environment variables (or in a .env file).
 """
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()  # Load .env file if present
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("automation.log"),
+        logging.StreamHandler()
+    ]
+)
 
 # ─────────────────────────────────────────────
 # Ollama settings

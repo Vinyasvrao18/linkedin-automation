@@ -8,6 +8,7 @@ Saves all posts to generated_posts.json with status tracking.
 import json
 import os
 import requests
+import logging
 from datetime import datetime
 from config import (
     OLLAMA_BASE_URL,
@@ -87,10 +88,10 @@ def generate_posts(certificates: list[dict]) -> list[dict]:
     for cert in certificates:
         name = cert.get("cert_name", "Unknown")
         if name in already_generated:
-            print(f"[post_gen] Skipping (already generated): {name}")
+            logging.info(f"Skipping (already generated): {name}")
             continue
 
-        print(f"[post_gen] Generating post for: {name} …")
+        logging.info(f"Generating post for: {name} …")
         try:
             text = _generate_post_text(cert)
             post = {
@@ -104,13 +105,13 @@ def generate_posts(certificates: list[dict]) -> list[dict]:
             }
             new_posts.append(post)
             next_id += 1
-            print(f"  ✓ Post generated ({len(text)} chars)")
+            logging.info(f"  ✓ Post generated ({len(text)} chars)")
         except Exception as exc:
-            print(f"  ✗ Error generating post for {name}: {exc}")
+            logging.error(f"Error generating post for {name}: {exc}")
 
     all_posts = existing_posts + new_posts
     _save_posts(all_posts)
-    print(f"[post_gen] Total posts saved: {len(all_posts)} ({len(new_posts)} new)")
+    logging.info(f"Total posts saved: {len(all_posts)} ({len(new_posts)} new)")
     return all_posts
 
 

@@ -9,6 +9,7 @@ import os
 import base64
 import json
 import requests
+import logging
 from config import OLLAMA_BASE_URL, OLLAMA_VISION_MODEL, CERTIFICATES_DIR
 
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -73,7 +74,7 @@ def scan_certificates() -> list[dict]:
     """
     if not os.path.isdir(CERTIFICATES_DIR):
         os.makedirs(CERTIFICATES_DIR, exist_ok=True)
-        print(f"[cert_reader] Created empty folder: {CERTIFICATES_DIR}")
+        logging.info(f"Created empty folder: {CERTIFICATES_DIR}")
         return []
 
     image_files = sorted(
@@ -83,21 +84,21 @@ def scan_certificates() -> list[dict]:
     )
 
     if not image_files:
-        print("[cert_reader] No certificate images found in certificates/")
+        logging.info("No certificate images found in certificates/")
         return []
 
     certs = []
     for filename in image_files:
         filepath = os.path.join(CERTIFICATES_DIR, filename)
-        print(f"[cert_reader] Processing: {filename} …")
+        logging.info(f"Processing: {filename} …")
         try:
             b64 = _image_to_base64(filepath)
             info = _query_ollama_vision(b64)
             info["image_path"] = filepath
             certs.append(info)
-            print(f"  ✓ Extracted: {info.get('cert_name', '?')}")
+            logging.info(f"  ✓ Extracted: {info.get('cert_name', '?')}")
         except Exception as exc:
-            print(f"  ✗ Error processing {filename}: {exc}")
+            logging.error(f"Error processing {filename}: {exc}")
             certs.append({
                 "cert_name": filename,
                 "issuer": "Unknown",
@@ -113,7 +114,6 @@ def scan_certificates() -> list[dict]:
 
 if __name__ == "__main__":
     results = scan_certificates()
-    print(f"\n{'='*50}")
-    print(f"Found {len(results)} certificate(s):")
+    logging.info(f"Found {len(results)} certificate(s):")
     for c in results:
-        print(f"  • {c['cert_name']} — issued by {c['issuer']}")
+        logging.info(f"  • {c['cert_name']} — issued by {c['issuer']}")

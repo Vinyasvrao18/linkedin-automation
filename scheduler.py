@@ -13,6 +13,7 @@ import schedule
 import time
 import signal
 import sys
+import logging
 from config import SCHEDULE_DAYS, SCHEDULE_TIME
 from post_generator import get_next_pending_post, mark_post_as_posted, mark_post_as_failed
 from linkedin import post_to_linkedin
@@ -32,18 +33,18 @@ def _post_next():
     """Fetch the next pending post and publish it to LinkedIn."""
     post = get_next_pending_post()
     if post is None:
-        print("[scheduler] No pending posts to publish. Skipping.")
+        logging.info("No pending posts to publish. Skipping.")
         return
 
-    print(f"[scheduler] Publishing post #{post['id']}: {post['cert_name']}")
+    logging.info(f"Publishing post #{post['id']}: {post['cert_name']}")
     result = post_to_linkedin(post["post_text"])
 
     if result["success"]:
         mark_post_as_posted(post["id"])
-        print(f"[scheduler] ✓ Post #{post['id']} published successfully!")
+        logging.info(f"✓ Post #{post['id']} published successfully!")
     else:
         mark_post_as_failed(post["id"], error=result.get("error", ""))
-        print(f"[scheduler] ✗ Post #{post['id']} failed: {result.get('error', 'unknown')}")
+        logging.error(f"✗ Post #{post['id']} failed: {result.get('error', 'unknown')}")
 
 
 def start_scheduler():
@@ -54,19 +55,19 @@ def start_scheduler():
     for day_num in SCHEDULE_DAYS:
         day_name = DAY_NAMES.get(day_num)
         if day_name is None:
-            print(f"[scheduler] ⚠ Invalid day number: {day_num}, skipping.")
+            logging.warning(f"Invalid day number: {day_num}, skipping.")
             continue
 
         # schedule.every().monday.at("10:00").do(...)
         getattr(schedule.every(), day_name).at(SCHEDULE_TIME).do(_post_next)
-        print(f"[scheduler] Registered: {day_name.capitalize()} at {SCHEDULE_TIME}")
+        logging.info(f"Registered: {day_name.capitalize()} at {SCHEDULE_TIME}")
 
-    print(f"\n[scheduler] ✓ Scheduler is running. Press Ctrl+C to stop.")
-    print(f"[scheduler]   Next run: {schedule.next_run()}\n")
+    logging.info("✓ Scheduler is running. Press Ctrl+C to stop.")
+    logging.info(f"Next run: {schedule.next_run()}")
 
     # Graceful shutdown
     def _shutdown(sig, frame):
-        print("\n[scheduler] Shutting down gracefully …")
+        logging.info("Shutting down gracefully …")
         schedule.clear()
         sys.exit(0)
 

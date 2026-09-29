@@ -6,12 +6,21 @@ Handles authentication, post creation, and error handling.
 """
 import json
 import requests
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from config import LINKEDIN_ACCESS_TOKEN, LINKEDIN_PERSON_URN
 
 
 LINKEDIN_API_BASE = "https://api.linkedin.com/v2"
 LINKEDIN_POST_URL = f"{LINKEDIN_API_BASE}/ugcPosts"
 
+# Setup session with retry logic
+session = requests.Session()
+retry = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+adapter = HTTPAdapter(max_retries=retry)
+session.mount('http://', adapter)
+session.mount('https://', adapter)
 
 def _get_headers() -> dict:
     """Return authorisation headers for LinkedIn API calls."""
@@ -65,7 +74,7 @@ def post_to_linkedin(post_text: str) -> dict:
     }
 
     try:
-        resp = requests.post(
+        resp = session.post(
             LINKEDIN_POST_URL,
             headers=_get_headers(),
             data=json.dumps(payload),
@@ -74,16 +83,16 @@ def post_to_linkedin(post_text: str) -> dict:
 
         if resp.status_code in (200, 201):
             post_id = resp.json().get("id", "unknown")
-            print(f"[linkedin] ✓ Post published successfully! ID: {post_id}")
+            logging.info(f"Post published successfully! ID: {post_id}")
             return {"success": True, "post_id": post_id, "error": None}
 
         error_msg = f"HTTP {resp.status_code}: {resp.text}"
-        print(f"[linkedin] ✗ Failed to post: {error_msg}")
+        logging.error(f"Failed to post: {error_msg}")
         return {"success": False, "post_id": None, "error": error_msg}
 
     except requests.RequestException as exc:
         error_msg = f"Request failed: {exc}"
-        print(f"[linkedin] ✗ {error_msg}")
+        logging.error(error_msg)
         return {"success": False, "post_id": None, "error": error_msg}
 
 
@@ -93,7 +102,7 @@ def verify_credentials() -> bool:
     the access token is valid.
     """
     try:
-        resp = requests.get(
+        resp = session.get(
             f"{LINKEDIN_API_BASE}/me",
             headers=_get_headers(),
             timeout=15,
@@ -101,10 +110,10 @@ def verify_credentials() -> bool:
         if resp.status_code == 200:
             data = resp.json()
             name = f"{data.get('localizedFirstName', '')} {data.get('localizedLastName', '')}"
-            print(f"[linkedin] ✓ Authenticated as: {name.strip()}")
+            logging.info(f"Authenticated as: {name.strip()}")
             return True
-        print(f"[linkedin] ✗ Credential check failed: HTTP {resp.status_code}")
+        logging.error(f"Credential check failed: HTTP {resp.status_code}")
         return False
     except Exception as exc:
-        print(f"[linkedin] ✗ Credential check error: {exc}")
+        logging.error(f"Credential check error: {exc}")
         return False

@@ -13,39 +13,58 @@ from cert_reader import scan_certificates
 from post_generator import generate_posts
 from linkedin import verify_credentials
 from scheduler import start_scheduler
+import logging
+import requests
+from config import OLLAMA_BASE_URL
+
+def check_ollama():
+    """Verify Ollama is running before starting everything."""
+    try:
+        resp = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        if resp.status_code == 200:
+            logging.info("Ollama is reachable.")
+            return True
+        else:
+            logging.warning(f"Ollama returned status {resp.status_code}")
+            return False
+    except requests.RequestException:
+        logging.error("Ollama is not reachable. Make sure it is running.")
+        return False
 
 
 def main():
-    print("=" * 60)
-    print("  🚀 LinkedIn Certification Post Automation")
-    print("=" * 60)
+    logging.info("=" * 60)
+    logging.info("  🚀 LinkedIn Certification Post Automation")
+    logging.info("=" * 60)
 
     # ── Step 0: Verify LinkedIn credentials ──────────────────
-    print("\n[main] Verifying LinkedIn credentials …")
+    logging.info("Verifying LinkedIn credentials …")
     if not verify_credentials():
-        print("[main] ⚠ LinkedIn credentials are invalid or missing.")
-        print("[main]   Set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN")
-        print("[main]   in your .env file. See README.md for instructions.")
-        print("[main]   Continuing anyway (posts will be generated but not published).\n")
+        logging.warning("LinkedIn credentials are invalid or missing.")
+        logging.warning("Set LINKEDIN_ACCESS_TOKEN and LINKEDIN_PERSON_URN in your .env file.")
+        logging.warning("Continuing anyway (posts will be generated but not published).")
+        
+    logging.info("Checking Ollama status...")
+    check_ollama()
 
     # ── Step 1: Scan certificate images ──────────────────────
-    print("[main] Scanning certificates/ folder …")
+    logging.info("Scanning certificates/ folder …")
     certs = scan_certificates()
     if not certs:
-        print("[main] No certificates found. Add images to the certificates/ folder.")
-        print("[main]   Supported formats: PNG, JPG, JPEG, WEBP")
-        print("[main]   The scheduler will still run and post any existing pending posts.\n")
+        logging.info("No certificates found. Add images to the certificates/ folder.")
+        logging.info("Supported formats: PNG, JPG, JPEG, WEBP")
+        logging.info("The scheduler will still run and post any existing pending posts.")
 
     # ── Step 2: Generate posts for new certs ─────────────────
     if certs:
-        print(f"\n[main] Generating posts for {len(certs)} certificate(s) …")
+        logging.info(f"Generating posts for {len(certs)} certificate(s) …")
         posts = generate_posts(certs)
         pending = sum(1 for p in posts if p["status"] == "pending")
         posted = sum(1 for p in posts if p["status"] == "posted")
-        print(f"[main] Posts summary: {pending} pending, {posted} already posted\n")
+        logging.info(f"Posts summary: {pending} pending, {posted} already posted")
 
     # ── Step 3: Start scheduler ──────────────────────────────
-    print("[main] Starting weekly scheduler …")
+    logging.info("Starting weekly scheduler …")
     start_scheduler()
 
 
