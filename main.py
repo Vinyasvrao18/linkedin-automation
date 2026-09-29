@@ -17,7 +17,7 @@ from scheduler import start_scheduler
 
 def main():
     print("=" * 60)
-    print("  LinkedIn Certification Post Automation")
+    print("  🚀 LinkedIn Certification Post Automation")
     print("=" * 60)
 
     # ── Step 0: Verify LinkedIn credentials ──────────────────
