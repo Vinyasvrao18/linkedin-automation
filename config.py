@@ -30,6 +30,7 @@ LINKEDIN_PERSON_URN = os.getenv("LINKEDIN_PERSON_URN", "")
 # ─────────────────────────────────────────────
 # Days of the week to post (0 = Monday … 6 = Sunday)
 SCHEDULE_DAYS = [0, 3]       # Monday & Thursday
+# Note: Time is based on the local system timezone where the script is running
 SCHEDULE_TIME = "10:00"      # 24-hr format, local time
 
 # ─────────────────────────────────────────────
